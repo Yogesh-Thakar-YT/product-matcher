@@ -1,6 +1,5 @@
 import streamlit as st
 import re
-import sqlite3
 import requests
 from bs4 import BeautifulSoup
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -15,7 +14,8 @@ st.set_page_config(
 )
 
 st.title("🔗 Product Code & Catalog Matcher")
-st.write("Enter a Northeastern Promotions product URL to find the matching ImprintID product (>80% similarity threshold).")
+# Updated description to remove the >80% requirement
+st.write("Enter a Northeastern Promotions product URL to find the closest matching ImprintID product based on highest similarity.")
 
 # Default Sample Catalog
 DEFAULT_CATALOG = [
@@ -87,7 +87,7 @@ if submit and input_url:
         ne_data = scraper.scrape(input_url)
         
         best_match = None
-        best_score = 0.0
+        best_score = -1.0 # Initialize below 0 so even a 0% match will register if it's the only one
         
         for cat_url in DEFAULT_CATALOG:
             cat_data = scraper.scrape(cat_url)
@@ -97,10 +97,12 @@ if submit and input_url:
                 best_match = cat_data
                 
         st.markdown("---")
-        if best_score >= 0.80 and best_match:
-            st.success(f"**Match Found! ({round(best_score * 100, 2)}% Confidence)**")
+        
+        # Changed the condition to just check if ANY match was found, ignoring the 80% rule
+        if best_match:
+            st.success(f"**Best Match Found! ({round(best_score * 100, 2)}% Confidence)**")
             st.markdown(f"**Input URL:** `{input_url}`")
             st.markdown(f"**Matched ImprintID URL:** [{best_match['url']}]({best_match['url']})")
             st.code(best_match['url'], language="text")
         else:
-            st.error(f"No match found above 80% confidence. Highest score: {round(best_score * 100, 2)}%")
+            st.error("No valid products were found in the catalog to compare.")
